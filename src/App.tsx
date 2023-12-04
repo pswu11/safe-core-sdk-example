@@ -1,11 +1,11 @@
 import "./init"
 import "./App.css"
-import AccountManagement from "./Web3AuthModalPack"
+import SafeAuth from "./SafeAuth"
 
 function App() {
   return (
     <>
-      <AccountManagement />
+      <SafeAuth />
     </>
   )
 }
