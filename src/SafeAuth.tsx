@@ -15,34 +15,31 @@ import {
 } from "@safe-global/safe-core-sdk-types"
 import { GelatoRelayPack } from "@safe-global/relay-kit"
 import { ethers } from "ethers"
-import { randomHex } from "web3-utils"
+// import { randomHex } from "web3-utils"
 import axios from "axios"
-
-const options: SafeAuthInitOptions = {
-  enableLogging: true,
-  showWidgetButton: false,
-  chainConfig: {
-    chainId: "0x5",
-    rpcTarget: "https://rpc.ankr.com/eth_goerli",
-  },
-}
-
-const web3AuthConfig: SafeAuthConfig = {
-  // goerli
-  txServiceUrl: "https://safe-transaction-goerli.safe.global",
-}
 
 export default function SafeAuth() {
   const [safeAuth, setSafeAuth] = useState<SafeAuthPack>()
-  const [web3Provider, setWeb3Provider] =
-    useState<ethers.BrowserProvider | null>(null)
   const [ownerAddress, setOwnerAddress] = useState<string>("")
   const [ownerSafes, setOwnerSafes] = useState<string[]>([])
-  const [relayTransactionTaskId, setRelayTransactionTaskId] =
-    useState<string>("")
+  const [relayTransactionTaskId, setRelayTransactionTaskId] = useState<string>("")
   const [selectedAddress, setSelectedAddress] = useState<string>("")
-  // Instantiate and initialize the pack
-  const authPack = new SafeAuthPack(web3AuthConfig)
+  const [web3Provider, setWeb3Provider] = useState<ethers.BrowserProvider | null>(null)
+  
+  const options: SafeAuthInitOptions = {
+    enableLogging: true,
+    showWidgetButton: false,
+    chainConfig: {
+      chainId: "0x5",
+      rpcTarget: "https://rpc.ankr.com/eth_goerli",
+    },
+  }
+
+  const safeAuthConfig: SafeAuthConfig = {
+    txServiceUrl: "https://safe-transaction-goerli.safe.global",
+  }
+
+  const authPack = new SafeAuthPack(safeAuthConfig)
 
   useEffect(() => {
     if (safeAuth) {
@@ -60,7 +57,7 @@ export default function SafeAuth() {
       console.log("no web3 provider")
       return
     }
-
+    // 1. Prepare SafeFactory
     // const RANDOM_SALT = randomHex(32)
     const safeOwner = await web3Provider.getSigner()
     const ethAdapter = new EthersAdapter({
@@ -77,17 +74,17 @@ export default function SafeAuth() {
       threshold: 1,
     }
 
-    // 2. Set up Relay Kit for deploying Safe
+    // 2. Set up protocolKit (Safe instance)
     let protocolKit: Safe
 
-    if (ownerSafes.length === 0) {
-      // predict safe address based on configs
+    if (ownerSafes.length === 0 && !selectedAddress) {
+
       const predictedSafeAddress = await safeFactory.predictSafeAddress(
         safeAccountConfig
         // RANDOM_SALT
       )
-
       console.log("predictedSafeAddress:", predictedSafeAddress)
+
       protocolKit = await Safe.create({
         ethAdapter: ethAdapter,
         predictedSafe: {
@@ -130,7 +127,6 @@ export default function SafeAuth() {
       options,
     })
 
-    // Error happens here: ENS resolution requires a provider
     const signedSafeTransaction = await protocolKit.signTransaction(
       safeTransaction
     )
@@ -159,8 +155,8 @@ export default function SafeAuth() {
           `https://safe-transaction-goerli.safe.global/api/v1/owners/${eoa}/safes`
         )
         .then((res) => {
-          console.log(res.data.safes)
-          setOwnerSafes(res.data.safes)
+          const safes = res.data.safes
+          setOwnerSafes(safes)
         })
     } else {
       setOwnerSafes(safes)
